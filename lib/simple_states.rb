@@ -48,6 +48,7 @@ module SimpleStates
   end
 
   attr_reader :past_states
+  attr_accessor :state_transitions
 
   def init_state
     self.state = self.class.initial_state if state.nil?
@@ -55,6 +56,26 @@ module SimpleStates
 
   def past_states
     @past_states ||= []
+  end
+
+  def state_transitions(requirements = {})
+    on ||= requirements[:on]
+    from ||= requirements[:from]
+    to ||= requirements[:to]
+    events.map { |event| { :options => event.options, :name => event.name} }.select { |event|  
+      if on.present?
+        event[:name].eql?(on.try(:to_sym))
+      elsif from.present? && to.present?
+        [*event[:options].from].include?(from.try(:to_sym)) && [*event[:options].to].include?(to.try(:to_sym))
+      elsif from.present?
+        [*event[:options].from].include?(from.try(:to_sym))
+      elsif to.present?
+        [*event[:options].to].include?(to.try(:to_sym))
+      else
+        from = self.state
+        [*event[:options].to].include?(from.try(:to_sym))
+      end
+    }.map { |event| { :event => event[:name], :from => from.present? ? from : event[:options].from, :to => to.present? ? to : event[:options].to } }
   end
 
   def state?(state, include_past = false)
